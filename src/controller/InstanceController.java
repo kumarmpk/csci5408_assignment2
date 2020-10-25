@@ -2,21 +2,23 @@ package controller;
 
 import db.DBConnection;
 import db.DatabaseDetail;
-import propertyreader.IPropertyFileReader;
-import propertyreader.PropertyFileReader;
-import thread.MyRunnable;
 import thread.MyThread;
+
+import javax.sql.XAConnection;
+import javax.swing.plaf.nimbus.State;
+import javax.transaction.xa.XAResource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
+import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class InstanceController {
 
     //Approach 1
     public void modifyValue1(int zipcode, String t1Value, String t2Value) throws Exception {
-        DatabaseDetail databaseDetail = getLocalDatabaseDetail();
+        Controller controller = new Controller();
+        DatabaseDetail databaseDetail = controller.getDatabaseInstanceWithInstanceType("local");
         DBConnection dbConnection = new DBConnection();
         Connection connection1 = dbConnection.getConnection(databaseDetail);
         Connection connection2 = dbConnection.getConnection(databaseDetail);
@@ -65,7 +67,8 @@ public class InstanceController {
 
     //Approach 2
     public void modifyValue2(int zipcode, String t1Value, String t2Value) throws Exception {
-        DatabaseDetail databaseDetail = getLocalDatabaseDetail();
+        Controller controller = new Controller();
+        DatabaseDetail databaseDetail = controller.getDatabaseInstanceWithInstanceType("local");
         DBConnection dbConnection = new DBConnection();
         Connection connection1 = dbConnection.getConnection(databaseDetail);
         Connection connection2 = dbConnection.getConnection(databaseDetail);
@@ -82,7 +85,8 @@ public class InstanceController {
 
     //Approach 3
     public void modifyValue3(int zipcode, String t1Value, String t2Value) throws Exception {
-        DatabaseDetail databaseDetail = getLocalDatabaseDetail();
+        Controller controller = new Controller();
+        DatabaseDetail databaseDetail = controller.getDatabaseInstanceWithInstanceType("local");
         DBConnection dbConnection = new DBConnection();
         Connection connection1 = dbConnection.getConnection(databaseDetail);
         Connection connection2 = dbConnection.getConnection(databaseDetail);
@@ -110,10 +114,9 @@ public class InstanceController {
         };
 
         thread1.start();
+        thread1.join();
         thread2.start();
-
-        Thread currentThread = Thread.currentThread();
-        currentThread.sleep(10000);
+        thread2.join();
 
         connection1.commit();
         connection1.close();
@@ -123,25 +126,9 @@ public class InstanceController {
     }
 
     //Approach 4
-    public void modifyValue4(int zipcode, String t1Value, String t2Value) throws Exception {
-        DatabaseDetail databaseDetail = getLocalDatabaseDetail();
-        DBConnection dbConnection = new DBConnection();
-        Connection connection1 = dbConnection.getConnection(databaseDetail);
-        Connection connection2 = dbConnection.getConnection(databaseDetail);
-
-        MyRunnable runnable1 = new MyRunnable(connection1, zipcode, t1Value);
-        MyRunnable runnable2 = new MyRunnable(connection2, zipcode, t2Value);
-
-        List<MyRunnable> runnableList = new CopyOnWriteArrayList<>();
-        runnableList.add(runnable1);
-        runnableList.add(runnable2);
-
-        //run(runnableList);
-    }
-
-    //Approach 5
     public void threadClssLogic(int zipcode, String t1Value, String t2Value) throws Exception {
-        DatabaseDetail databaseDetail = getLocalDatabaseDetail();
+        Controller controller = new Controller();
+        DatabaseDetail databaseDetail = controller.getDatabaseInstanceWithInstanceType("local");
         DBConnection dbConnection = new DBConnection();
         Connection connection1 = dbConnection.getConnection(databaseDetail);
         Connection connection2 = dbConnection.getConnection(databaseDetail);
@@ -160,7 +147,87 @@ public class InstanceController {
         run(threadList);
     }
 
-    //approach 5 run
+    //Approach 5
+    synchronized public void distributedTransaction() throws Exception {
+        Controller controller = new Controller();
+        DBConnection dbConnection = new DBConnection();
+
+        DatabaseDetail databaseDetail1 = controller.getDatabaseInstanceWithInstanceType("local");
+        DatabaseDetail databaseDetail2 = controller.getDatabaseInstanceWithInstanceType("instance1");
+
+        Connection connection1 = dbConnection.getConnection(databaseDetail1);
+        Connection connection2 = dbConnection.getConnection(databaseDetail2);
+
+        XAConnection xaconnection1 = dbConnection.getXAConnection(connection1);
+        XAConnection xaConnection2 = dbConnection.getXAConnection(connection2);
+
+        XAResource xaResource1 = xaconnection1.getXAResource();
+        XAResource xaResource2 = xaConnection2.getXAResource();
+
+        javax.transaction.xa.Xid xid = new MyXid(100, new byte[]{0x01}, new byte[]{0x02});
+
+        xaResource1.start(xid, javax.transaction.xa.XAResource.TMNOFLAGS);
+        xaResource2.start(xid, javax.transaction.xa.XAResource.TMNOFLAGS);
+
+        Statement statement1 = xaconnection1.getConnection().createStatement();
+
+        String query = "update customers set customer_city = 'city1' where customer_zip_code_prefix = '6273';";
+
+        statement1.executeUpdate(query);
+
+        query = "update geolocation set geolocation_city = 'city1' where geolocation_zip_code_prefix = '6273';";
+
+        statement1.executeUpdate(query);
+
+        Statement statement2 = xaConnection2.getConnection().createStatement();
+
+        Random r = new java.util.Random ();
+        String orderIdPart1 = Long.toString (r.nextLong () & Long.MAX_VALUE, 36);
+        String orderIdPart2 = Long.toString (r.nextLong () & Long.MAX_VALUE, 36);
+        String orderIdPart3 = Long.toString (r.nextLong () & Long.MAX_VALUE, 36);
+        String orderId = orderIdPart1.concat(orderIdPart2).concat(orderIdPart3);
+
+        query = "insert into orders values ('"+orderId+"', '00012a2ce6f8dcda20d059ce98491703', 'delivered'," +
+                "sysdate(), sysdate(), sysdate(), sysdate(), sysdate());";
+
+        statement2.executeUpdate(query);
+
+        query = "insert into order_payments values ('"+orderId+"', '1', 'credit_card', '8', '100.01');";
+
+        statement2.executeUpdate(query);
+
+        query = "insert into order_items (order_id, order_item_id, product_id, seller_id, " +
+                "shipping_limit_date, price, freight_value) " +
+                "values ('"+orderId+"', '1', '64315bd8c0c47303179dd2e25b579d00'," +
+                "'7aa4334be125fcdd2ba64b3180029f14', sysdate(), '100', '0.01');";
+
+        statement2.execute(query);
+
+        xaResource1.end(xid, javax.transaction.xa.XAResource.TMSUCCESS);
+        xaResource2.end(xid, javax.transaction.xa.XAResource.TMSUCCESS);
+
+        int rc1 = 0;
+        int rc2 = 0;
+
+        rc1 = xaResource1.prepare(xid);
+        if(rc1 == javax.transaction.xa.XAResource.XA_OK){
+            rc2 = xaResource2.prepare(xid);
+            if(rc2 == javax.transaction.xa.XAResource.XA_OK){
+                xaResource1.commit(xid, false);
+                xaResource2.commit(xid, false);
+            }
+        }
+
+        statement1.close();
+        statement2.close();
+        xaconnection1.close();
+        xaConnection2.close();
+        connection1.close();
+        connection2.close();
+
+    }
+
+    //approach 4 run
     public void run(List<MyThread> threadList) throws Exception {
         System.out.println(11122);
         if(threadList != null && !threadList.isEmpty()) {
@@ -186,27 +253,6 @@ public class InstanceController {
             return;
         }
     }
-
-    /*//Approach 4 run
-    public void run(List<thread.MyRunnable> runnableList) throws SQLException {
-        System.out.println(11122);
-        ExecutorService executor = Executors.newFixedThreadPool(10);
-        if(runnableList != null && !runnableList.isEmpty()) {
-            for (thread.MyRunnable runnable : runnableList) {
-                executor.execute(runnable);
-                if (!runnable.isExceptionFlag()) {
-                    runnable.getConnection().commit();
-                    runnable.getConnection().close();
-                    runnableList.remove(runnable);
-                } else {
-                    executor.execute(runnable);
-                }
-            }
-            run(runnableList);
-        } else {
-            return;
-        }
-    }*/
 
     public Connection transaction1(Connection connection, int zipcode, String value) throws Exception{
         connection.setAutoCommit(false);
@@ -251,19 +297,6 @@ public class InstanceController {
         }
 
         return connection;
-    }
-
-
-    public DatabaseDetail getLocalDatabaseDetail() throws Exception {
-        DatabaseDetail databaseDetail = new DatabaseDetail();
-        IPropertyFileReader propertyFileReader = new PropertyFileReader();
-        Properties prop = propertyFileReader.loadPropertyFile("../Properties.properties");
-        databaseDetail.setName(prop.getProperty("local.Name"));
-        databaseDetail.setUrl(prop.getProperty("local.url"));
-        databaseDetail.setPort(prop.getProperty("local.Port"));
-        databaseDetail.setPassword(prop.getProperty("local.Password"));
-        databaseDetail.setUser(prop.getProperty("local.User"));
-        return databaseDetail;
     }
 
 }

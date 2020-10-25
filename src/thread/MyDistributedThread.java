@@ -8,13 +8,28 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.lang.Thread.sleep;
+public class MyDistributedThread extends Thread{
 
-public class MyRunnable implements Runnable {
     private Connection connection;
     private int zipcode;
     private String value;
     private boolean exceptionFlag = false;
+
+    public int getZipcode() {
+        return zipcode;
+    }
+
+    public void setZipcode(int zipcode) {
+        this.zipcode = zipcode;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
 
     public boolean isExceptionFlag() {
         return exceptionFlag;
@@ -24,14 +39,14 @@ public class MyRunnable implements Runnable {
         return connection;
     }
 
-    public MyRunnable(Connection con, int code, String v){
+    public MyDistributedThread(Connection con, int code, String v){
         this.connection = con;
         this.zipcode = code;
         this.value = v;
     }
 
     @Override
-    public void run(){
+    synchronized public void run(){
         try{
             System.out.println(1);
             transaction();
@@ -39,16 +54,8 @@ public class MyRunnable implements Runnable {
             exceptionFlag = true;
             e.printStackTrace();
             System.out.println("MySQLTransactionRollbackException in thread: "+e);
-            if(e.getSQLState().equals("40001") && e.toString().toLowerCase().contains("lock wait timeout exceeded")) {
-                try {
-                    sleep(1000);
-                    run();
-                } catch (InterruptedException interruptedException) {
-                    interruptedException.printStackTrace();
-                }
-            }
         } catch (Exception e){
-
+            System.out.println(e);
         }
     }
 
@@ -73,4 +80,5 @@ public class MyRunnable implements Runnable {
 
         return connection;
     }
+
 }
