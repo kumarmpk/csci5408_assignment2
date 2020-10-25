@@ -24,16 +24,10 @@ public class DBConnection extends MysqlDataSource implements XADataSource {
     }
 
     public Connection getConnection(DatabaseDetail databaseDetail) throws SQLException {
-        Connection con = null;
-
-        try {
-            con = DriverManager.getConnection(formDBURL(databaseDetail.getUrl(),
+        return DriverManager.getConnection(formDBURL(databaseDetail.getUrl(),
                     databaseDetail.getPort(), databaseDetail.getName()),
                     databaseDetail.getUser(),databaseDetail.getPassword());
-        } catch (Exception ex) {
-            throw ex;
-        }
-        return con;
+
     }
 
     private XAConnection wrapConnection(JdbcConnection conn) throws SQLException {

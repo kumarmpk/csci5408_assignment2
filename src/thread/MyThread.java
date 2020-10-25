@@ -19,16 +19,8 @@ public class MyThread extends Thread{
         return zipcode;
     }
 
-    public void setZipcode(int zipcode) {
-        this.zipcode = zipcode;
-    }
-
     public String getValue() {
         return value;
-    }
-
-    public void setValue(String value) {
-        this.value = value;
     }
 
     public boolean isExceptionFlag() {
@@ -52,14 +44,13 @@ public class MyThread extends Thread{
             transaction();
         } catch (MySQLTransactionRollbackException e) {
             exceptionFlag = true;
-            e.printStackTrace();
             System.out.println("MySQLTransactionRollbackException in thread: "+e);
         } catch (Exception e){
             System.out.println(e);
         }
     }
 
-    public Connection transaction() throws Exception{
+    public void transaction() throws Exception{
         connection.setAutoCommit(false);
 
         Statement statement = connection.createStatement();
@@ -77,8 +68,6 @@ public class MyThread extends Thread{
             statement.executeUpdate(query);
             System.out.println("t: "+query);
         }
-
-        return connection;
     }
 
 }

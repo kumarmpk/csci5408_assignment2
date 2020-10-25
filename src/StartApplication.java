@@ -18,15 +18,12 @@ public class StartApplication {
         int choice = scan.nextInt();
 
         InstanceController instanceController = new InstanceController();
+        int zipCode = 1151;
+        String toCityT1 = "T1 city";
+        String toCityT2 = "T2 city";
         switch (choice) {
             case 1:
                 try {
-                    System.out.println("Type the zipcode of the user: ");
-                    int zipCode = scan.nextInt();
-                    System.out.println("Type the city name of the transaction 1: ");
-                    String toCityT1 = scan.next();
-                    System.out.println("Type the city name of the transaction 2: ");
-                    String toCityT2 = scan.next();
                     instanceController.modifyValue1(zipCode, toCityT1, toCityT2);
                 } catch (Exception e) {
                     System.out.println("Exception in approach 1" + e);
@@ -35,12 +32,6 @@ public class StartApplication {
 
             case 2:
                 try {
-                    System.out.println("Type the zipcode of the user: ");
-                    int zipCode = scan.nextInt();
-                    System.out.println("Type the city name of the transaction 1: ");
-                    String toCityT1 = scan.next();
-                    System.out.println("Type the city name of the transaction 2: ");
-                    String toCityT2 = scan.next();
                     instanceController.modifyValue2(zipCode, toCityT1, toCityT2);
                 } catch (Exception e) {
                     System.out.println("Exception in approach 2" + e);
@@ -49,12 +40,6 @@ public class StartApplication {
 
             case 3:
                 try {
-                    System.out.println("Type the zipcode of the user: ");
-                    int zipCode = scan.nextInt();
-                    System.out.println("Type the city name of the transaction 1: ");
-                    String toCityT1 = scan.next();
-                    System.out.println("Type the city name of the transaction 2: ");
-                    String toCityT2 = scan.next();
                     instanceController.modifyValue3(zipCode, toCityT1, toCityT2);
                 } catch (Exception e) {
                     System.out.println("Exception in approach 2" + e);
@@ -63,16 +48,9 @@ public class StartApplication {
 
             case 4:
                 try {
-                    System.out.println("Type the zipcode of the user: ");
-                    int zipCode = scan.nextInt();
-                    System.out.println("Type the city name of the transaction 1: ");
-                    String toCityT1 = scan.next();
-                    System.out.println("Type the city name of the transaction 2: ");
-                    String toCityT2 = scan.next();
                     instanceController.threadClssLogic(zipCode, toCityT1, toCityT2);
                 } catch (Exception e) {
                     System.out.println("Exception in approach 3" + e);
-                    e.printStackTrace();
                 }
                 break;
 
@@ -81,7 +59,6 @@ public class StartApplication {
                     instanceController.distributedTransaction();
                 } catch (Exception e) {
                     System.out.println("Exception in approach 3" + e);
-                    e.printStackTrace();
                 }
                 break;
 
